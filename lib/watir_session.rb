@@ -1,0 +1,3 @@
+module WatirSession
+  # Your code goes here...
+end
