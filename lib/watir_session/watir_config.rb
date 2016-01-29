@@ -63,8 +63,4 @@ class WatirConfig < Model
   # Note: This setting will be ignored if platform is not Linux, and will raise error if xvfb is not installed
   key(:headless) { ENV['HEADLESS'] == 'true' }
 
-  ## --Additional Options-- ##
-
-  key(:custom_config)
-
 end

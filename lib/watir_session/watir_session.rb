@@ -8,6 +8,26 @@ module WatirSession
     @watir_config ||= WatirConfig.new
   end
 
+  def custom_config
+    @custom_config ||= CustomConfig.new
+  end
+
+  def create_configurations
+    watir_config
+    spec_path = $LOAD_PATH.select { |path| path =~ /\/spec$/ }.first
+    config_path = spec_path.gsub('spec', 'config')
+    config_files = Dir.entries(config_path)
+    yml_files = config_files.select { |file| file =~ /\.yml$/ }
+    yml_files.each do |yaml|
+      session = yaml.gsub('.yml', '')
+      if Object.const_defined?("#{session.capitalize}Config")
+        config = YAML.load_file("#{config_path}/#{yaml}")
+        obj = Object.const_get("#{session.capitalize}Config").new(config)
+        custom_config.send("#{session}=", obj)
+      end
+    end
+  end
+
   def registered_sessions
     @registered_sessions ||= []
   end
@@ -27,7 +47,7 @@ module WatirSession
   end
 
   def start
-    watir_config
+    create_configurations
     configure_watir
   end
 
@@ -115,6 +135,7 @@ the #reuse_browser configuration setting"
 
   def reset_config!
     @watir_config = nil
+    @custom_config = nil
   end
 
   def reset_registered_sessions!
