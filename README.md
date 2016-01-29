@@ -31,8 +31,8 @@ with your  test harness (RSpec, Cucumber, etc) for maximum flexibility.
 
 ``` ruby
 WatirSession.start 
-WatirSession.start_test  
-WatirSession.end_test  
+WatirSession.before_each  
+WatirSession.after_each  
 ```
 
 ## Example
@@ -64,10 +64,10 @@ RSpec.configure do |config|
   WatirSession.register_session(SauceSession.new)
 
   config.before(:each) do
-    @browser = WatirSession.start_test
+    @browser = WatirSession.before_each
   end
   config.after(:each) do
-    WatirSession.end_test
+    WatirSession.after_each
   end
 end
 ```

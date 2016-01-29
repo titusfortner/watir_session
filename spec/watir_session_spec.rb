@@ -89,7 +89,7 @@ describe WatirSession do
 
   context 'with hooks' do
     before(:each) { WatirSession.reset_registered_sessions! }
-    after(:each) { WatirSession.end_test }
+    after(:each) { WatirSession.after_each }
 
     class SampleConfig < Model
       key(:browser) { :firefox }
@@ -129,7 +129,7 @@ describe WatirSession do
       it "creates a browser from hook" do
         WatirSession.register_session(SampleSession.new)
         WatirSession.start
-        WatirSession.start_test
+        WatirSession.before_each
         expect(WatirSession.browser.name).to be :firefox
       end
     end

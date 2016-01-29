@@ -3,7 +3,6 @@ module WatirSession
   extend self
 
   attr_reader :browser
-  attr_accessor :watir_config
 
   def watir_config
     @watir_config ||= WatirConfig.new
@@ -27,6 +26,21 @@ module WatirSession
     end
   end
 
+  def start
+    watir_config
+    configure_watir
+  end
+
+  def before_suite(*args)
+    create_browser if @watir_config.reuse_browser
+
+    execute_hook :before_suite, *args
+  end
+
+  def before_browser(*args)
+    execute_hook :before_browser, *args
+  end
+
   def create_browser(*args)
     use_headless_display if @watir_config.headless
 
@@ -41,63 +55,45 @@ module WatirSession
     @browser
   end
 
-  def before_tests(config = nil, *args)
-    @watir_config = config || watir_config
-
-    configure_watir
-
-    create_browser if @watir_config.reuse_browser
-
-    execute_hook :before_tests, *args
-    execute_hook :start, *args
-  end
-  alias_method :start, :before_tests
-
-  def start_test(*args)
+  def before_each(*args)
     if @watir_config.reuse_browser && browser.nil
       raise StandardError, "#before_tests method must be set in order to use
 the #reuse_browser configuration setting"
     end
 
-    before_test(*args)
+    before_browser(*args)
 
     @browser = create_browser(*args) unless @watir_config.reuse_browser
     @browser.window.maximize if @watir_config.maximize_browser
 
-    execute_hook :start_test, *args
+    execute_hook :before_each, *args
 
     @browser
   end
 
-  def end_test(*args)
-    execute_hook :end_test, *args
+  def after_each(*args)
+    execute_hook :after_each, *args
 
     take_screenshot(*args) unless watir_config.take_screenshots == :never
 
     quit_browser unless watir_config.reuse_browser
 
-    after_test(*args)
+    after_browser(*args)
   end
 
-  def after_tests(*args)
-    quit_browser if @watir_config.reuse_browser
-
-    execute_hook :after_tests, *args
-    execute_hook :end, *args
+  def after_browser(*args)
+    execute_hook :after_browser, *args
   end
-  alias_method :end, :after_tests
 
   def take_screenshot(*args)
     screenshot = execute_hook(:take_screenshot, *args).compact
     browser.screenshot.save("screenshot.png") if screenshot.nil?
   end
 
-  def before_test(*args)
-    execute_hook :before_test, *args
-  end
+  def after_suite(*args)
+    quit_browser if @watir_config.reuse_browser
 
-  def after_test(*args)
-    execute_hook :after_test, *args
+    execute_hook :after_suite, *args
   end
 
   def quit_browser
