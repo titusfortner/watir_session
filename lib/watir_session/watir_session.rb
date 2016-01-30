@@ -44,11 +44,11 @@ module WatirSession
 
   def execute_hook(method, *args)
     sessions = registered_sessions.select do |session|
-      session.new.public_methods(false).include? method
+      session.public_methods(false).include? method
     end
 
     sessions.each_with_object([]) do |session, array|
-      array << session.new.send(method, *args)
+      array << session.send(method, *args)
     end
   end
 

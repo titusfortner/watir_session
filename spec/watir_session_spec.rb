@@ -103,15 +103,16 @@ describe WatirSession do
     describe "#register_session" do
       it "registers a session" do
         WatirSession.start
-        WatirSession.register_session(SampleSession)
-        expect(WatirSession.registered_sessions).to include(SampleSession)
+        sample_session = SampleSession.new
+        WatirSession.register_session(sample_session)
+        expect(WatirSession.registered_sessions).to include(sample_session)
       end
     end
 
     describe "#create_browser" do
       it "creates a browser from hook" do
         WatirSession.start
-        WatirSession.register_session(SampleSession)
+        WatirSession.register_session(SampleSession.new)
         WatirSession.before_each
         expect(WatirSession.browser.name).to be :firefox
       end
