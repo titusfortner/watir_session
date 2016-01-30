@@ -3,6 +3,7 @@ module WatirSession
   extend self
 
   attr_reader :browser
+  attr_writer :watir_config
 
   def watir_config
     @watir_config ||= WatirConfig.new
@@ -13,19 +14,24 @@ module WatirSession
   end
 
   def create_configurations
-    watir_config
     spec_path = $LOAD_PATH.select { |path| path =~ /\/spec$/ }.first
     config_path = spec_path.gsub('spec', 'config')
-    config_files = Dir.entries(config_path)
-    yml_files = config_files.select { |file| file =~ /\.yml$/ }
-    yml_files.each do |yaml|
-      session = yaml.gsub('.yml', '')
-      if Object.const_defined?("#{session.capitalize}Config")
-        config = YAML.load_file("#{config_path}/#{yaml}")
-        obj = Object.const_get("#{session.capitalize}Config").new(config)
-        custom_config.send("#{session}=", obj)
-      end
+
+    return unless Dir.exist?(config_path)
+    Dir.entries(config_path).select { |file| file =~ /\.yml$/ }.each do |yaml|
+      config_name = yaml.gsub('.yml', '')
+      next unless Object.const_defined?("#{config_name.capitalize}Config")
+      load_yml(config_path, config_name)
     end
+  end
+
+  def load_yml(config_path, config_name)
+    config = YAML.load_file("#{config_path}/#{config_name}.yml")
+    if config.values.all? { |v| v.is_a? Hash } && custom_config.respond_to?(config_name.singularize)
+      config = config[custom_config.send(config_name.singularize)]
+    end
+    obj = Object.const_get("#{config_name.capitalize}Config").new(config)
+    custom_config.send("#{config_name}=", obj)
   end
 
   def registered_sessions
@@ -38,21 +44,21 @@ module WatirSession
 
   def execute_hook(method, *args)
     sessions = registered_sessions.select do |session|
-      session.public_methods(false).include? method
+      session.new.public_methods(false).include? method
     end
 
     sessions.each_with_object([]) do |session, array|
-      array << session.send(method, *args)
+      array << session.new.send(method, *args)
     end
   end
 
   def start
-    create_configurations
     configure_watir
+    create_configurations
   end
 
   def before_suite(*args)
-    create_browser if @watir_config.reuse_browser
+    create_browser if watir_config.reuse_browser
 
     execute_hook :before_suite, *args
   end
@@ -62,29 +68,29 @@ module WatirSession
   end
 
   def create_browser(*args)
-    use_headless_display if @watir_config.headless
+    use_headless_display if watir_config.headless
 
     @browser = execute_hook(:create_browser, *args).compact.first
 
     unless @browser
       http_client = Selenium::WebDriver::Remote::Http::Default.new
-      http_client.timeout = @watir_config.http_timeout
-      @browser = Watir::Browser.new(@watir_config.browser,
+      http_client.timeout = watir_config.http_timeout
+      @browser = Watir::Browser.new(watir_config.browser,
                                     http_client: http_client)
     end
     @browser
   end
 
   def before_each(*args)
-    if @watir_config.reuse_browser && browser.nil
+    if watir_config.reuse_browser && browser.nil
       raise StandardError, "#before_tests method must be set in order to use
 the #reuse_browser configuration setting"
     end
 
     before_browser(*args)
 
-    @browser = create_browser(*args) unless @watir_config.reuse_browser
-    @browser.window.maximize if @watir_config.maximize_browser
+    @browser = create_browser(*args) unless watir_config.reuse_browser
+    @browser.window.maximize if watir_config.maximize_browser
 
     execute_hook :before_each, *args
 
@@ -111,7 +117,7 @@ the #reuse_browser configuration setting"
   end
 
   def after_suite(*args)
-    quit_browser if @watir_config.reuse_browser
+    quit_browser if watir_config.reuse_browser
 
     execute_hook :after_suite, *args
   end
@@ -143,9 +149,9 @@ the #reuse_browser configuration setting"
   end
 
   def configure_watir
-    Watir.default_timeout = @watir_config.watir_timeout
-    Watir.prefer_css = @watir_config.prefer_css
-    Watir.always_locate = @watir_config.always_locate
+    Watir.default_timeout = watir_config.watir_timeout
+    Watir.prefer_css = watir_config.prefer_css
+    Watir.always_locate = watir_config.always_locate
   end
 
   def use_headless_display

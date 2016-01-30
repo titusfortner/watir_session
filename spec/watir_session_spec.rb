@@ -29,18 +29,9 @@ describe WatirSession do
 
     it "starts a session with provided configuration" do
       watir_config = WatirConfig.new(browser: 'firefox')
-      WatirSession.start(watir_config)
+      WatirSession.watir_config = watir_config
       expect(WatirSession.watir_config).to_not eql(WatirConfig.new)
       expect(WatirSession.watir_config).to eql(watir_config)
-    end
-
-    it "starts a session with provided configuration overriding previously set configuration" do
-      firefox_config = WatirConfig.new(browser: 'firefox')
-      safari_config = WatirConfig.new(browser: 'safari')
-      WatirSession.watir_config = firefox_config
-      WatirSession.start(safari_config)
-      expect(WatirSession.watir_config).to_not eql(firefox_config)
-      expect(WatirSession.watir_config).to eql(safari_config)
     end
   end
 
@@ -111,24 +102,16 @@ describe WatirSession do
 
     describe "#register_session" do
       it "registers a session" do
-        sample_session = SampleSession.new
-        WatirSession.register_session(sample_session)
-        expect(WatirSession.registered_sessions).to include(sample_session)
-      end
-    end
-
-    describe "#start" do
-      it "executes a start call from a registered session" do
-        WatirSession.register_session(SampleSession.new)
         WatirSession.start
-        expect(WatirSession.watir_config.always_locate).to be false
+        WatirSession.register_session(SampleSession)
+        expect(WatirSession.registered_sessions).to include(SampleSession)
       end
     end
 
     describe "#create_browser" do
       it "creates a browser from hook" do
-        WatirSession.register_session(SampleSession.new)
         WatirSession.start
+        WatirSession.register_session(SampleSession)
         WatirSession.before_each
         expect(WatirSession.browser.name).to be :firefox
       end
