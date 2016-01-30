@@ -1,5 +1,3 @@
-require 'watir_model'
-
 class WatirConfig < WatirModel
 
   ## --Browser Options-- ##
