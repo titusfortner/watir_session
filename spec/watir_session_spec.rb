@@ -91,7 +91,7 @@ describe WatirSession do
     before(:each) { WatirSession.reset_registered_sessions! }
     after(:each) { WatirSession.after_each }
 
-    class SampleConfig < Model
+    class SampleConfig < WatirModel
       key(:browser) { :firefox }
     end
 

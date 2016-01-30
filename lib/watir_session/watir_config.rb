@@ -1,7 +1,6 @@
-require 'model'
-require 'yaml'
+require 'watir_model'
 
-class WatirConfig < Model
+class WatirConfig < WatirModel
 
   ## --Browser Options-- ##
 

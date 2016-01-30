@@ -1,6 +1,6 @@
-require 'model'
+require 'watir_model'
 
-class CustomConfig < Model
+class CustomConfig < WatirModel
 
   # Implement this class in your project
 

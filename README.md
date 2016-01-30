@@ -50,9 +50,9 @@ class SauceSession
 end
 ```
 ```ruby
-require 'model'
+require 'watir_model'
 
-class SauceConfig < Model
+class SauceConfig < WatirModel
   key(:sauce_username) { ENV['SAUCE_USERNAME'] }
   key(:sauce_access_key) { ENV['SAUCE_ACCESS_KEY'] }
   key(:endpoint) {"http://#{sauce_username}:#{sauce_access_key}@ondemand.saucelabs.com:80/wd/hub"}

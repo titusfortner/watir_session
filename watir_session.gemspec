@@ -29,6 +29,6 @@ to configurarion and session data so they do not need to be passed around as par
   spec.add_development_dependency 'rspec', '~> 3.0'
   spec.add_development_dependency 'headless' # This only gets required when on Linux
   spec.add_development_dependency 'watir-webdriver'
-  spec.add_development_dependency 'test-model'
+  spec.add_development_dependency 'watir_model'
 
 end
