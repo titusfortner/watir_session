@@ -31,7 +31,7 @@ module WatirSession
       config = config[custom_config.send(config_name.singularize)]
     end
     obj = Object.const_get("#{config_name.capitalize}Config").new(config)
-    custom_config.send("#{config_name}=", obj)
+    custom_config.send("#{config_name.singularize}=", obj)
   end
 
   def registered_sessions
