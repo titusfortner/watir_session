@@ -71,14 +71,16 @@ module WatirSession
     use_headless_display if watir_config.headless
 
     @browser = execute_hook(:create_browser, *args).compact.first
+    return @browser if @browser
 
-    unless @browser
+    if args.empty?
       http_client = Selenium::WebDriver::Remote::Http::Default.new
       http_client.timeout = watir_config.http_timeout
       @browser = Watir::Browser.new(watir_config.browser,
                                     http_client: http_client)
+    else
+      @browser = Watir::Browser.new *args
     end
-    @browser
   end
 
   def before_each(*args)
