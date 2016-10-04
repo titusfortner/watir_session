@@ -3,39 +3,53 @@ module WatirSession
   extend self
 
   attr_reader :browser
-  attr_writer :watir_config
 
-  def watir_config
-    @watir_config ||= WatirConfig.new
-  end
-
-  def custom_config
-    @custom_config ||= CustomConfig.new
+  def config
+    @config ||= Config.new
   end
 
   def create_configurations
     spec_path = $LOAD_PATH.select { |path| path =~ /\/spec$/ }.first
     config_path = spec_path.gsub('spec', 'config')
-
     return unless Dir.exist?(config_path)
-    Dir.entries(config_path).select { |file| file =~ /\.yml$/ }.each do |yaml|
+    yamls = Dir.entries(config_path).select { |file| file =~ /\.yml$/ }
+
+    yamls.each do |yaml|
       config_name = yaml.gsub('.yml', '')
-      next unless Object.const_defined?("#{config_name.capitalize}Config")
+      next unless Object.const_defined?("#{config_name.singularize.capitalize}Config")
       load_yml(config_path, config_name)
     end
   end
 
   def load_yml(config_path, config_name)
-    config = YAML.load_file("#{config_path}/#{config_name}.yml")
-    if config.values.all? { |v| v.is_a? Hash } && custom_config.respond_to?(config_name.singularize)
-      config = config[custom_config.send(config_name.singularize)]
+    yaml = YAML.load_file("#{config_path}/#{config_name}.yml")
+    if yaml.values.all? { |v| v.is_a? Hash } && config.respond_to?(config_name.singularize)
+      value = config.send(config_name.singularize)
+      yaml = yaml[value]
+      config.send("#{config_name.singularize}_key=", value)
     end
-    obj = Object.const_get("#{config_name.capitalize}Config").new(config)
-    custom_config.send("#{config_name.singularize}=", obj)
+    config_list[config_name.singularize] = yaml
+  end
+
+  def config_list
+    @config_list ||= {}
+  end
+
+  def load_configs
+    config_list.each do |k, v|
+      obj = Object.const_get("#{k.capitalize}Config").new(v)
+      config.send("#{k.singularize}=", obj) if config.respond_to? k.singularize.to_sym
+    end
   end
 
   def registered_sessions
     @registered_sessions ||= []
+  end
+
+  def register_sessions
+#    WatirSession.register_session(RSpecSession.new)
+#    WatirSession.register_session(TestrailSession.new) if WatirSession.config.use_testrail
+#    WatirSession.register_session(SauceSession.new) if WatirSession.config.use_sauce
   end
 
   def register_session(session)
@@ -55,10 +69,11 @@ module WatirSession
   def start
     configure_watir
     create_configurations
+    load_configs
   end
 
   def before_suite(*args)
-    create_browser if watir_config.reuse_browser
+    create_browser if config.reuse_browser
 
     execute_hook :before_suite, *args
   end
@@ -68,15 +83,16 @@ module WatirSession
   end
 
   def create_browser(*args)
-    use_headless_display if watir_config.headless
+    raise StandardError, "Multiple Browsers not currently supported" if @browser
+    use_headless_display if config.headless
 
     @browser = execute_hook(:create_browser, *args).compact.first
     return @browser if @browser
 
     if args.empty?
       http_client = Selenium::WebDriver::Remote::Http::Default.new
-      http_client.timeout = watir_config.http_timeout
-      @browser = Watir::Browser.new(watir_config.browser,
+      http_client.timeout = config.http_timeout
+      @browser = Watir::Browser.new(config.browser,
                                     http_client: http_client)
     else
       @browser = Watir::Browser.new *args
@@ -84,15 +100,15 @@ module WatirSession
   end
 
   def before_each(*args)
-    if watir_config.reuse_browser && browser.nil
+    if config.reuse_browser && browser.nil
       raise StandardError, "#before_tests method must be set in order to use
 the #reuse_browser configuration setting"
     end
 
     before_browser(*args)
 
-    @browser = create_browser(*args) unless watir_config.reuse_browser
-    @browser.window.maximize if watir_config.maximize_browser
+    @browser = create_browser unless config.reuse_browser
+    @browser.window.maximize if config.maximize_browser
 
     execute_hook :before_each, *args
 
@@ -102,9 +118,9 @@ the #reuse_browser configuration setting"
   def after_each(*args)
     execute_hook :after_each, *args
 
-    take_screenshot(*args) unless watir_config.take_screenshots == :never
+    take_screenshot(*args) unless config.take_screenshots == :never
 
-    quit_browser unless watir_config.reuse_browser
+    quit_browser unless config.reuse_browser
 
     after_browser(*args)
   end
@@ -119,7 +135,7 @@ the #reuse_browser configuration setting"
   end
 
   def after_suite(*args)
-    quit_browser if watir_config.reuse_browser
+    quit_browser if config.reuse_browser
 
     execute_hook :after_suite, *args
   end
@@ -142,8 +158,7 @@ the #reuse_browser configuration setting"
   end
 
   def reset_config!
-    @watir_config = nil
-    @custom_config = nil
+    @config = nil
   end
 
   def reset_registered_sessions!
@@ -151,9 +166,9 @@ the #reuse_browser configuration setting"
   end
 
   def configure_watir
-    Watir.default_timeout = watir_config.watir_timeout
-    Watir.prefer_css = watir_config.prefer_css
-    Watir.always_locate = watir_config.always_locate
+    Watir.default_timeout = config.watir_timeout
+    Watir.prefer_css = config.prefer_css
+    Watir.always_locate = config.always_locate
   end
 
   def use_headless_display
@@ -166,4 +181,32 @@ the #reuse_browser configuration setting"
     @headless.start
   end
 
+end
+
+RSpec.configure do |config|
+  WatirSession.start
+
+  if WatirSession.config.retries > 0
+    require 'rspec/retry'
+    config.verbose_retry = true
+    config.exceptions_to_retry = [Net::ReadTimeout, Net::OpenTimeout]
+    config.display_try_failure_messages = true
+    config.default_retry_count = config.retries + 1
+  end
+
+  config.before(:suite) do |example|
+    WatirSession.before_suite(example)
+  end
+
+  config.before(:each) do |example|
+    WatirSession.before_each(example)
+  end
+
+  config.after(:each) do |example|
+    WatirSession.after_each(example)
+  end
+
+  config.after(:suite) do |example|
+    WatirSession.after_suite(example)
+  end
 end

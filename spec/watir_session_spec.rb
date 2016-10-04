@@ -2,45 +2,35 @@ require 'spec_helper'
 
 describe WatirSession do
 
-  before(:each) { WatirSession.reset_config! }
-
   describe "#watir_config=" do
     it "stores provided configuration" do
       watir_config = WatirConfig.new(browser: 'firefox')
-      WatirSession.watir_config = watir_config
+
       expect(WatirSession.watir_config).to_not eql(WatirConfig.new)
       expect(WatirSession.watir_config).to eql(watir_config)
     end
   end
 
   describe "#start" do
-    it "starts a session with default configuration" do
-      WatirSession.start
+    it "automatically starts a session with default configuration" do
+      expect(WatirSession.browser).to exist
       expect(WatirSession.watir_config).to eql(WatirConfig.new)
     end
 
     it "starts a session with previously set configuration" do
       watir_config = WatirConfig.new(browser: 'firefox')
       WatirSession.watir_config = watir_config
-      WatirSession.start
+      expect(WatirSession.browser).to exist
       expect(WatirSession.watir_config).to_not eql(WatirConfig.new)
       expect(WatirSession.watir_config).to eql(watir_config)
     end
 
-    it "starts a session with provided configuration" do
-      watir_config = WatirConfig.new(browser: 'firefox')
-      WatirSession.watir_config = watir_config
-      expect(WatirSession.watir_config).to_not eql(WatirConfig.new)
-      expect(WatirSession.watir_config).to eql(watir_config)
-    end
   end
 
   describe "#create_browser" do
     after(:each) { WatirSession.quit_browser }
 
     it "creates a local browser" do
-      WatirSession.start
-      WatirSession.create_browser
       expect(WatirSession.browser).to be_a(Watir::Browser)
     end
   end
@@ -79,7 +69,9 @@ describe WatirSession do
   end
 
   context 'with hooks' do
-    before(:each) { WatirSession.reset_registered_sessions! }
+    before(:each) {
+      WatirSession.reset_registered_sessions!
+    }
     after(:each) { WatirSession.after_each }
 
     class SampleConfig < WatirModel
