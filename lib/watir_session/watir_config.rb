@@ -15,15 +15,6 @@ class WatirConfig < WatirModel
   # Time in seconds to wait to interact with an element
   key(:watir_timeout) { (ENV['WATIR_TIMEOUT'] || '30').to_i }
 
-  # true means that when an element goes stale it is relocated
-  # false means that when an element goes stale, an exception is thrown
-  # Note: As currently implemented, this setting would be better named relocate_when_necessary
-  key(:always_locate) { ENV['ALWAYS_LOCATE'] != 'true' }
-
-  # true means elements will be located with CSS instead of XPATH when possible
-  # false means that elements will be located by XPATH instead of CSS when possible
-  key(:prefer_css) { ENV['PREFER_CSS'] == 'true' }
-
 
   ## --Test Options-- ##
 
