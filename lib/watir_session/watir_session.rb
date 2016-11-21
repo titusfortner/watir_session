@@ -152,8 +152,6 @@ the #reuse_browser configuration setting"
 
   def configure_watir
     Watir.default_timeout = watir_config.watir_timeout
-    Watir.prefer_css = watir_config.prefer_css
-    Watir.always_locate = watir_config.always_locate
   end
 
   def use_headless_display

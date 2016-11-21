@@ -92,7 +92,7 @@ describe WatirSession do
       end
 
       def start(*args)
-        WatirSession.watir_config.always_locate = false
+        WatirSession.watir_config.default_timeout = 29
       end
 
       def create_browser(*args)
